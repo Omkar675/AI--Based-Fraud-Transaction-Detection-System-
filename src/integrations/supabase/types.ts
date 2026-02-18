@@ -14,7 +14,146 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      fraud_analysis: {
+        Row: {
+          amount_anomaly: boolean | null
+          analysis_details: Json | null
+          analyzed_at: string
+          duplicate_detected: boolean | null
+          flags: Json
+          geo_mismatch: boolean | null
+          id: string
+          risk_level: string
+          risk_score: number
+          transaction_id: string
+          unusual_time: boolean | null
+          user_id: string
+          velocity_check: boolean | null
+        }
+        Insert: {
+          amount_anomaly?: boolean | null
+          analysis_details?: Json | null
+          analyzed_at?: string
+          duplicate_detected?: boolean | null
+          flags?: Json
+          geo_mismatch?: boolean | null
+          id?: string
+          risk_level?: string
+          risk_score?: number
+          transaction_id: string
+          unusual_time?: boolean | null
+          user_id: string
+          velocity_check?: boolean | null
+        }
+        Update: {
+          amount_anomaly?: boolean | null
+          analysis_details?: Json | null
+          analyzed_at?: string
+          duplicate_detected?: boolean | null
+          flags?: Json
+          geo_mismatch?: boolean | null
+          id?: string
+          risk_level?: string
+          risk_score?: number
+          transaction_id?: string
+          unusual_time?: boolean | null
+          user_id?: string
+          velocity_check?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fraud_analysis_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          description: string | null
+          device_info: string | null
+          id: string
+          ip_address: string | null
+          location: string | null
+          receiver_account: string
+          receiver_name: string
+          sender_account: string
+          sender_name: string
+          transaction_date: string
+          transaction_id: string
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          device_info?: string | null
+          id?: string
+          ip_address?: string | null
+          location?: string | null
+          receiver_account: string
+          receiver_name: string
+          sender_account: string
+          sender_name: string
+          transaction_date?: string
+          transaction_id: string
+          transaction_type?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          device_info?: string | null
+          id?: string
+          ip_address?: string | null
+          location?: string | null
+          receiver_account?: string
+          receiver_name?: string
+          sender_account?: string
+          sender_name?: string
+          transaction_date?: string
+          transaction_id?: string
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
