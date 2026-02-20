@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +32,8 @@ import {
   TrendingUp,
   BarChart3,
   Eye,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
@@ -85,7 +87,6 @@ function analyzeTransaction(
   let unusualTime = false;
   let duplicateDetected = false;
 
-  // 1. Amount anomaly: if amount > 2x average or > $10,000
   if (history.length > 0) {
     const avgAmount = history.reduce((s, t) => s + Number(t.amount), 0) / history.length;
     if (tx.amount > avgAmount * 2) {
@@ -99,18 +100,14 @@ function analyzeTransaction(
     flags.push("High-value transaction exceeds $10,000");
   }
 
-  // 2. Velocity check: >5 transactions in last hour
   const oneHourAgo = new Date(Date.now() - 3600000);
-  const recentCount = history.filter(
-    (t) => new Date(t.created_at) > oneHourAgo
-  ).length;
+  const recentCount = history.filter((t) => new Date(t.created_at) > oneHourAgo).length;
   if (recentCount >= 5) {
     velocityCheck = true;
     riskScore += 20;
     flags.push(`${recentCount} transactions in the last hour (velocity alert)`);
   }
 
-  // 3. Geo mismatch: different location from most recent
   if (tx.location && history.length > 0) {
     const lastLocation = history[0]?.location;
     if (lastLocation && lastLocation.toLowerCase() !== tx.location.toLowerCase()) {
@@ -120,7 +117,6 @@ function analyzeTransaction(
     }
   }
 
-  // 4. Unusual time: between 1 AM and 5 AM
   const txHour = new Date(tx.transaction_date).getHours();
   if (txHour >= 1 && txHour <= 5) {
     unusualTime = true;
@@ -128,7 +124,6 @@ function analyzeTransaction(
     flags.push(`Transaction at unusual hour (${txHour}:00)`);
   }
 
-  // 5. Duplicate detection
   const fiveMinAgo = new Date(Date.now() - 300000);
   const duplicate = history.find(
     (t) =>
@@ -194,6 +189,9 @@ export default function Dashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailTx, setDetailTx] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isLive, setIsLive] = useState(false);
+  const [newTxId, setNewTxId] = useState<string | null>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Form state
   const [amount, setAmount] = useState("");
@@ -209,13 +207,7 @@ export default function Dashboard() {
     if (!authLoading && !user) navigate("/auth");
   }, [user, authLoading, navigate]);
 
-  useEffect(() => {
-    if (user) {
-      fetchTransactions();
-    }
-  }, [user]);
-
-  async function fetchTransactions() {
+  const fetchTransactions = useCallback(async () => {
     const { data, error } = await supabase
       .from("transactions")
       .select("*")
@@ -227,7 +219,6 @@ export default function Dashboard() {
     }
     setTransactions(data || []);
 
-    // Fetch analyses
     const { data: analysisData } = await supabase
       .from("fraud_analysis")
       .select("*");
@@ -239,7 +230,62 @@ export default function Dashboard() {
       });
       setAnalyses(map);
     }
-  }
+  }, []);
+
+  // Initial fetch + realtime subscriptions
+  useEffect(() => {
+    if (!user) return;
+
+    fetchTransactions();
+
+    const channel = supabase
+      .channel("dashboard-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "transactions",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newTx = payload.new as Transaction;
+          setTransactions((prev) => {
+            if (prev.some((t) => t.id === newTx.id)) return prev;
+            return [newTx, ...prev];
+          });
+          // Highlight new row for 3 seconds
+          setNewTxId(newTx.id);
+          setTimeout(() => setNewTxId(null), 3000);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "fraud_analysis",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newAnalysis = payload.new as FraudAnalysis;
+          setAnalyses((prev) => ({
+            ...prev,
+            [newAnalysis.transaction_id]: newAnalysis,
+          }));
+        }
+      )
+      .subscribe((status) => {
+        setIsLive(status === "SUBSCRIBED");
+      });
+
+    channelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+      setIsLive(false);
+    };
+  }, [user, fetchTransactions]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -256,7 +302,6 @@ export default function Dashboard() {
     const txId = generateTransactionId();
     const txDate = new Date().toISOString();
 
-    // Insert transaction
     const { data: txData, error: txError } = await supabase
       .from("transactions")
       .insert({
@@ -318,8 +363,7 @@ export default function Dashboard() {
         ? "⚡ Medium risk — review recommended"
         : "✅ Transaction looks safe"
     );
-
-    fetchTransactions();
+    // Realtime subscription handles UI updates automatically
   }
 
   // Stats
@@ -355,8 +399,35 @@ export default function Dashboard() {
           </span>
         </div>
         <div className="flex items-center gap-3">
+          {/* Live indicator */}
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-heading border ${
+              isLive
+                ? "bg-success/10 text-success border-success/30"
+                : "bg-muted text-muted-foreground border-border"
+            }`}
+          >
+            {isLive ? (
+              <>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
+                </span>
+                <Wifi className="w-3 h-3" /> LIVE
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-3 h-3" /> Connecting…
+              </>
+            )}
+          </div>
           <span className="text-sm text-muted-foreground hidden sm:block">{user?.email}</span>
-          <Button variant="ghost" size="sm" onClick={() => { signOut(); navigate("/"); }} className="text-muted-foreground hover:text-destructive">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { signOut(); navigate("/"); }}
+            className="text-muted-foreground hover:text-destructive"
+          >
             <LogOut className="w-4 h-4" />
           </Button>
         </div>
@@ -390,7 +461,7 @@ export default function Dashboard() {
         {/* Analytics Charts */}
         <AnalyticsCharts transactions={transactions} analyses={analyses} />
 
-        {/* Add Transaction */}
+        {/* Transactions header */}
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-2xl font-semibold text-foreground flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-primary" /> Transactions
@@ -471,45 +542,62 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="space-y-3">
-            {transactions.map((tx, i) => {
-              const analysis = analyses[tx.id];
-              return (
-                <motion.div
-                  key={tx.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="glass rounded-xl p-4 cyber-border hover:border-primary/40 transition-all cursor-pointer"
-                  onClick={() => setDetailTx(tx.id)}
-                >
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Activity className="w-5 h-5 text-primary" />
+            <AnimatePresence initial={false}>
+              {transactions.map((tx) => {
+                const analysis = analyses[tx.id];
+                const isNew = tx.id === newTxId;
+                return (
+                  <motion.div
+                    key={tx.id}
+                    initial={{ opacity: 0, x: -30, scale: 0.97 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                    className={`glass rounded-xl p-4 transition-colors cursor-pointer ${
+                      isNew
+                        ? "border border-primary/70 shadow-[0_0_16px_hsl(165_80%_48%/0.25)]"
+                        : "cyber-border hover:border-primary/40"
+                    }`}
+                    onClick={() => setDetailTx(tx.id)}
+                  >
+                    {isNew && (
+                      <div className="flex items-center gap-1.5 mb-2 text-xs text-primary font-heading">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
+                        </span>
+                        New — just arrived via realtime
                       </div>
-                      <div>
-                        <div className="font-heading text-sm font-semibold text-foreground">{tx.transaction_id}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {tx.sender_name} → {tx.receiver_name} · {tx.transaction_type}
+                    )}
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Activity className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="font-heading text-sm font-semibold text-foreground">{tx.transaction_id}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {tx.sender_name} → {tx.receiver_name} · {tx.transaction_type}
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-4">
+                        <span className="font-display text-lg font-bold text-foreground">
+                          ${Number(tx.amount).toLocaleString()}
+                        </span>
+                        {analysis && <RiskBadge level={analysis.risk_level} />}
+                        <Eye className="w-4 h-4 text-muted-foreground" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="font-display text-lg font-bold text-foreground">
-                        ${Number(tx.amount).toLocaleString()}
-                      </span>
-                      {analysis && <RiskBadge level={analysis.risk_level} />}
-                      <Eye className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                  {analysis && (
-                    <div className="mt-3">
-                      <RiskMeter score={Number(analysis.risk_score)} />
-                    </div>
-                  )}
-                </motion.div>
-              );
-            })}
+                    {analysis && (
+                      <div className="mt-3">
+                        <RiskMeter score={Number(analysis.risk_score)} />
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         )}
 
@@ -541,7 +629,6 @@ export default function Dashboard() {
                       <RiskBadge level={detailAnalysis.risk_level} />
                     </div>
 
-                    {/* Checks */}
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         { label: "Velocity", value: detailAnalysis.velocity_check },
@@ -561,7 +648,6 @@ export default function Dashboard() {
                       ))}
                     </div>
 
-                    {/* Flags */}
                     {(detailAnalysis.flags as string[]).length > 0 && (
                       <div className="space-y-2">
                         <span className="text-sm font-heading text-foreground">Flags:</span>
