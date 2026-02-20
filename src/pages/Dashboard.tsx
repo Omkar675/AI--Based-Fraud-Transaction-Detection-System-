@@ -34,6 +34,7 @@ import {
   Eye,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import AnalyticsCharts from "@/components/AnalyticsCharts";
 
 interface Transaction {
   id: string;
@@ -385,6 +386,9 @@ export default function Dashboard() {
             </motion.div>
           ))}
         </div>
+
+        {/* Analytics Charts */}
+        <AnalyticsCharts transactions={transactions} analyses={analyses} />
 
         {/* Add Transaction */}
         <div className="flex items-center justify-between">
