@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: fraudshield-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Postgre@123
+      POSTGRES_DB: fraud_detection_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - fraud-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fraudshield-node-api
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - DATABASE_URL=postgres://postgres:Postgre@123@db:5432/fraud_detection_db
+      - JWT_SECRET=super_secret_jwt_key_please_change_in_production
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - FRONTEND_URL=http://localhost:8080
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - fraud-net
+
+  ml-api:
+    build:
+      context: ./ml_backend
+      dockerfile: Dockerfile
+    container_name: fraudshield-ml-api
+    ports:
+      - "8000:8000"
+    networks:
+      - fraud-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fraudshield-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+      - ml-api
+    networks:
+      - fraud-net
+
+networks:
+  fraud-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

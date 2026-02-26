@@ -1,0 +1,16 @@
+{
+  "credit_card_xgboost.pkl": {
+    "type": "<class 'dict'>",
+    "keys": [
+      "model",
+      "best_roc_auc",
+      "features"
+    ]
+  },
+  "credit_card_scaler.pkl": {
+    "type": "<class 'sklearn.preprocessing._data.StandardScaler'>"
+  },
+  "credit_card_feature_names.pkl": {
+    "type": "<class 'list'>"
+  }
+}
