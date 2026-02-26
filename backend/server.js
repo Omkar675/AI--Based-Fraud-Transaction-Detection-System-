@@ -8,10 +8,12 @@ const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+    origin: function (origin, callback) {
+        callback(null, true); // Dynamically allow any origin (great for full Vercel compatibility)
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 app.use(express.json());
 
