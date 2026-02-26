@@ -142,7 +142,8 @@ export default function Dashboard() {
   async function fetchTransactions() {
     // using custom backend
     try {
-      const res = await fetch("http://localhost:5001/api/transactions?limit=100", {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+      const res = await fetch(`${API_URL}/api/transactions?limit=100`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       });
       if (!res.ok) throw new Error("Failed to fetch");
@@ -244,7 +245,8 @@ export default function Dashboard() {
       }
 
       // Push to backend history DB
-      const res = await fetch("http://localhost:5001/api/transactions", {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+      const res = await fetch(`${API_URL}/api/transactions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

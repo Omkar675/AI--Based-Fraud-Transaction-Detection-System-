@@ -19,7 +19,8 @@ export default function VerifyEmail() {
 
         const verifyAccount = async () => {
             try {
-                const res = await fetch("http://localhost:5001/api/auth/verify-email", {
+                const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+                const res = await fetch(`${API_URL}/api/auth/verify-email`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ token }),

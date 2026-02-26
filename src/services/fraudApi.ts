@@ -14,7 +14,7 @@ export interface PredictionResponse {
     error?: string;
 }
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_ML_API_URL || "http://localhost:8000";
 
 export async function predictFraud(
     transactionData: Record<string, any>,
