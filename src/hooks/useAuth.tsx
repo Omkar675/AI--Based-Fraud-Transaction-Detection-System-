@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem("token", data.token);
             return { data };
         } catch (err: any) {
-            return { error: { message: err.message || "Network error. Is the server running?" } };
+            return { error: { message: `Fetch failed at ${API_URL}. Check Vercel Env Vars!` } };
         }
     };
 
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             return { data };
         } catch (err: any) {
-            return { error: { message: err.message || "Network error. Is the server running?" } };
+            return { error: { message: `Fetch failed at ${API_URL}. Check Vercel Env Vars!` } };
         }
     };
 
