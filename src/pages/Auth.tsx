@@ -66,6 +66,30 @@ export default function Auth() {
             </h1>
           </div>
 
+          <div className="mb-6 p-4 bg-muted/30 border border-primary/20 rounded-xl">
+            <h3 className="text-sm font-semibold text-primary mb-2">Diagnostic Test</h3>
+            <p className="text-xs text-muted-foreground mb-3 font-mono break-all">{import.meta.env.VITE_API_URL || "No VITE_API_URL set!"}</p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full text-xs"
+              onClick={async () => {
+                try {
+                  const url = import.meta.env.VITE_API_URL || "http://localhost:5001";
+                  alert(`Testing: ${url}/api/auth/register`);
+                  const res = await fetch(`${url}/api/auth/register`, {
+                    method: 'OPTIONS',
+                  });
+                  alert(`OPTIONS preflight success! Status: ${res.status}`);
+                } catch (e: any) {
+                  alert(`Hard fail: ${e.message}`);
+                }
+              }}
+            >
+              Test Direct Connection
+            </Button>
+          </div>
+
           <h2 className="font-heading text-xl font-semibold text-center text-foreground mb-6">
             {isLogin ? "Sign In" : "Create Account"}
           </h2>
