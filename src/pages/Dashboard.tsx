@@ -203,7 +203,8 @@ export default function Dashboard() {
     e.preventDefault();
     if (!user) return;
 
-    const parsedAmount = parseFloat(amount);
+    const cleanAmount = amount.replace(/,/g, '').trim();
+    const parsedAmount = parseFloat(cleanAmount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       toast.error("Enter a valid amount");
       return;
