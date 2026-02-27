@@ -33,7 +33,7 @@ app.add_middleware(
 )
 
 # Initialize pipeline
-pipeline = UniversalFraudDetectionPipeline(model_dir='models/')
+pipeline = UniversalFraudDetectionPipeline(model_dir='ml_backend/models/')
 
 @app.on_event("startup")
 async def startup_event():
