@@ -281,7 +281,7 @@ export default function Dashboard() {
         riskLevel = mlResponse.result.risk_level;
         toast.info(`Engine: ${optimalAlgo} returned ${mlResponse.result.prediction}`);
       } else {
-        toast.error("Model offline, using fallback heuristic");
+        toast.error(mlResponse.error || "Model offline, using fallback heuristic");
         if (parsedAmount >= 10000) {
           riskScore = 85;
           riskLevel = "high";
