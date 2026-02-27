@@ -375,15 +375,33 @@ const path = require('path');
 
 // Serve Frontend in Production
 if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
-    const rootDir = path.resolve(__dirname, '..');
-    app.use(express.static(path.join(rootDir, 'dist')));
+    const possiblePaths = [
+        path.join(__dirname, '..', 'dist'),
+        path.join(__dirname, 'dist'),
+        path.join(process.cwd(), 'dist')
+    ];
 
-    app.get('*', (req, res) => {
-        if (!req.path.startsWith('/api')) {
-            res.sendFile(path.join(rootDir, 'dist', 'index.html'));
+    let distPath = null;
+    for (const p of possiblePaths) {
+        if (require('fs').existsSync(p)) {
+            distPath = p;
+            break;
         }
-    });
-} else {
+    }
+
+    if (distPath) {
+        console.log(`[SERVER] Serving static files from: ${distPath}`);
+        app.use(express.static(distPath));
+        app.get('*', (req, res) => {
+            if (!req.path.startsWith('/api')) {
+                res.sendFile(path.join(distPath, 'index.html'));
+            }
+        });
+    } else {
+        console.warn("[SERVER] Static 'dist' folder not found. API mode only.");
+    }
+}
+else {
     // Basic root fallback for dev
     app.get('/', (req, res) => {
         res.send('Neural Shield Backend API API is running. Switch to Production or Render mode to serve the static frontend UI.');
