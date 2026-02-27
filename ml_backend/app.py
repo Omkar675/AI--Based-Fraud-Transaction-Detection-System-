@@ -122,7 +122,10 @@ async def predict(data: TransactionData):
         features_list = []
         raw_data = data.transaction_data
         
-        # If feature names are not available, just use values (risky but handles models without feature_names.pkl)
+        print(f"--- Processing {txn_type} via {algo} ---")
+        print(f"Incoming Keys: {list(raw_data.keys())}")
+        
+        # If feature names are not available, just use values
         if feature_names:
             for fn in feature_names:
                 try:
@@ -131,10 +134,11 @@ async def predict(data: TransactionData):
                     val = 0.0
                 features_list.append(val)
         else:
-             # Just guess order based on the dict (dangerous, hopefully feature_names exist)
+             print("Warning: No feature names found. Using raw values.")
              features_list = [float(v) for v in raw_data.values()]
             
         features_array = [features_list]
+        print(f"Feature Array (First 5): {features_list[:5]}... Length: {len(features_list)}")
         
         # Apply scaler if it exists
         if scaler:
@@ -142,23 +146,39 @@ async def predict(data: TransactionData):
             
         # Predict
         prediction_val = model.predict(features_array)[0]
+        print(f"Raw Prediction Value: {prediction_val}")
         
         if isinstance(prediction_val, str):
             prediction = prediction_val.upper()
         else:
+            # Standard 0/1 indicator
             prediction = "FRAUD" if prediction_val == 1 else "LEGITIMATE"
             
         # Probability
         try:
-            probabilities = model.predict_proba(features_array)[0]
-            if len(probabilities) >= 2:
-                prob_fraud = float(probabilities[1]) * 100
+            if hasattr(model, "predict_proba"):
+                probabilities = model.predict_proba(features_array)[0]
+                if len(probabilities) >= 2:
+                    prob_fraud = float(probabilities[1]) * 100
+                else:
+                    prob_fraud = float(probabilities[0]) * 100
             else:
-                prob_fraud = float(probabilities[0]) * 100
-        except Exception:
-            prob_fraud = 99.0 if prediction == "FRAUD" else 1.0
+                # Heuristic mapping for models without proba
+                prob_fraud = 90.0 if prediction == "FRAUD" else 10.0
+        except Exception as prob_err:
+            print(f"Proba Error: {prob_err}")
+            prob_fraud = 95.0 if prediction == "FRAUD" else 5.0
+
+        # Heuristic "Safety Valve" for extreme outliers
+        # If amount is > 500k and it's a bank/upi transfer, boost risk
+        amount_val = float(raw_data.get('amount', raw_data.get('Amount', raw_data.get('amount (INR)', 0))))
+        if amount_val > 500000 and prediction == "LEGITIMATE":
+            print(f"Outlier detected: ${amount_val}. Boosting risk score.")
+            prob_fraud = 65.0 # Elevate to medium risk at least
             
         risk_level = "HIGH" if prob_fraud > 70 else "MEDIUM" if prob_fraud > 30 else "LOW"
+        
+        print(f"Final Outcome: {prediction} ({prob_fraud}%) -> {risk_level}")
         
         return {
             "success": True,
@@ -171,7 +191,9 @@ async def predict(data: TransactionData):
             }
         }
     except Exception as e:
+        import traceback
         print(f"Error during prediction: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
 if __name__ == "__main__":

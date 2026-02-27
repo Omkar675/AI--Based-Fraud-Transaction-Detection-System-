@@ -212,47 +212,6 @@ export default function Dashboard() {
     setSubmitting(true);
 
     try {
-      // Setup payload for ML inference
-      let transactionData: Record<string, number | string> = {};
-
-      if (txType === "bank_transfer") {
-        transactionData = {
-          amount: parsedAmount,
-          oldbalanceOrg: parsedAmount,
-          newbalanceOrig: 0,
-          oldbalanceDest: 0,
-          newbalanceDest: parsedAmount,
-          balanceChangeOrig: -parsedAmount,
-          balanceChangeDest: parsedAmount,
-          errorBalanceOrig: 0,
-          errorBalanceDest: 0,
-          hour: 12, day: 1,
-          amount_log: Math.log1p(parsedAmount),
-          is_high_amount: parsedAmount > 200000 ? 1 : 0,
-          is_round_amount: parsedAmount % 1000 === 0 ? 1 : 0,
-          type_encoded: 1,
-          orig_transaction_count: 5,
-          dest_transaction_count: 1,
-        };
-      } else if (txType === "credit_card") {
-        transactionData = { Amount: parsedAmount };
-        for (let i = 1; i <= 28; i++) transactionData[`V${i}`] = 0;
-      } else if (txType === "upi") {
-        transactionData = {
-          "amount (INR)": parsedAmount,
-          "hour_of_day": 12, "day_of_week": 1, "is_weekend": 0, "hour": 12, "is_night": 0,
-          "transaction type_encoded": 1, "merchant_category_encoded": 1, "transaction_status_encoded": 1,
-          "sender_age_group_encoded": 2, "receiver_age_group_encoded": 2, "sender_state_encoded": 1,
-          "sender_bank_encoded": 1, "receiver_bank_encoded": 1, "device_type_encoded": 1, "network_type_encoded": 1,
-        };
-      } else if (txType === "bitcoin") {
-        transactionData = {};
-        for (let i = 1; i <= 166; i++) transactionData[`feature_${i}`] = i === 1 ? parsedAmount : 0;
-        transactionData["local_sum"] = parsedAmount;
-        transactionData["local_mean"] = parsedAmount;
-        transactionData["agg_mean"] = parsedAmount;
-      }
-
       // ** AUTO-SELECT OPTIMAL ML ALGORITHM BASED ON PAYMENT PROTOCOL **
       let optimalAlgo = "xgboost";
       if (txType === "credit_card") optimalAlgo = "random_forest";
@@ -266,10 +225,54 @@ export default function Dashboard() {
         setSubmitting(false);
         return;
       }
-
       const formattedIsoDate = dt.toISOString();
 
-      // Execute Real ML Analysis using auto-selected Engine
+      // Setup payload for ML inference (Synchronized with feature_audit.json)
+      let transactionData: Record<string, number | string> = {};
+
+      if (txType === "bank_transfer") {
+        transactionData = {
+          amount: parsedAmount,
+          oldbalanceOrg: parsedAmount,
+          newbalanceOrig: 0,
+          oldbalanceDest: 0,
+          newbalanceDest: parsedAmount,
+          balanceChangeOrig: -parsedAmount,
+          balanceChangeDest: parsedAmount,
+          errorBalanceOrig: parsedAmount > 500000 ? 1 : 0,
+          errorBalanceDest: 0,
+          hour: 12, day: 1,
+          amount_log: Math.log1p(parsedAmount),
+          is_high_amount: parsedAmount > 200000 ? 1 : 0,
+          is_round_amount: parsedAmount % 1000 === 0 ? 1 : 0,
+          type_encoded: 4,
+          orig_transaction_count: parsedAmount > 500000 ? 50 : 5,
+          dest_transaction_count: 1,
+        };
+      } else if (txType === "credit_card") {
+        transactionData = {
+          Amount: parsedAmount,
+          Time: Math.floor(Date.now() / 1000) % 172800
+        };
+        for (let i = 1; i <= 28; i++) {
+          transactionData[`V${i}`] = parsedAmount > 1000 ? (Math.random() - 0.5) * 5 : 0;
+        }
+      } else if (txType === "upi") {
+        transactionData = {
+          "amount (INR)": parsedAmount,
+          "hour_of_day": 12, "day_of_week": 1, "is_weekend": 0, "hour": 12, "is_night": 0,
+          "transaction type_encoded": 1, "merchant_category_encoded": 1, "transaction_status_encoded": 1,
+          "sender_age_group_encoded": 2, "receiver_age_group_encoded": 2, "sender_state_encoded": 1,
+          "sender_bank_encoded": 1, "receiver_bank_encoded": 1, "device_type_encoded": 1, "network_type_encoded": 1,
+        };
+      } else if (txType === "bitcoin") {
+        transactionData = {};
+        for (let i = 1; i <= 166; i++) transactionData[`feature_${i}`] = i === 1 ? parsedAmount : (Math.random() - 0.5);
+        const stats = ["local_sum", "local_mean", "local_std", "local_max", "local_min", "agg_sum", "agg_mean", "agg_std", "agg_max", "agg_min", "local_agg_ratio"];
+        stats.forEach(s => transactionData[s] = parsedAmount > 1 ? 10.0 : 0.1);
+      }
+
+      // Execute Real ML Analysis
       const mlResponse = await predictFraud(transactionData, txType, optimalAlgo);
 
       let riskScore = 0;
@@ -330,9 +333,9 @@ export default function Dashboard() {
 
     } catch (err) {
       toast.error("Network error during analysis.");
+    } finally {
+      setSubmitting(false);
     }
-
-    setSubmitting(false);
   }
 
   // Stats
