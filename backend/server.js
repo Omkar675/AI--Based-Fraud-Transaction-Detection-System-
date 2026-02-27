@@ -243,6 +243,9 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
 
         await client.query('BEGIN');
 
+        const final_transaction_id = transaction_id || 'TXN-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+        const final_transaction_date = transaction_date || new Date().toISOString();
+
         // Insert transaction
         const txResult = await client.query(`
       INSERT INTO transactions 
@@ -250,8 +253,8 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id
     `, [
-            req.user.id, transaction_id, amount, sender_name, sender_account,
-            receiver_name, receiver_account, transaction_type, description, transaction_date
+            req.user.id, final_transaction_id, amount, sender_name, sender_account,
+            receiver_name, receiver_account, transaction_type, description, final_transaction_date
         ]);
 
         const tx_id = txResult.rows[0].id;
@@ -307,6 +310,36 @@ app.get('/api/transactions', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// 7. Delete Transaction
+app.delete('/api/transactions/:id', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Ensure the transaction belongs to the user
+        const check = await client.query('SELECT id FROM transactions WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+        if (check.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Transaction not found or unauthorized' });
+        }
+
+        // Delete analysis first due to foreign key constraints (if any)
+        await client.query('DELETE FROM fraud_analysis WHERE transaction_id = $1', [req.params.id]);
+
+        // Delete transaction
+        await client.query('DELETE FROM transactions WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+
+        await client.query('COMMIT');
+        res.json({ message: 'Transaction deleted successfully' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    } finally {
+        client.release();
     }
 });
 

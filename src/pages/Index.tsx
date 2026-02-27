@@ -18,7 +18,7 @@ export default function Index() {
             <Shield className="w-5 h-5 text-primary-foreground" />
           </div>
           <span className="font-display text-lg font-bold tracking-wider text-foreground">
-            FRAUD<span className="text-primary">SHIELD</span>
+            NEURAL <span className="text-primary">SHIELD</span>
           </span>
         </div>
         <Button
@@ -50,7 +50,7 @@ export default function Index() {
           </h1>
 
           <p className="font-body text-lg md:text-xl text-muted-foreground max-w-xl mx-auto mb-10">
-            Advanced heuristic analysis engine that scores every transaction in real-time. 
+            Advanced heuristic analysis engine that scores every transaction in real-time.
             Velocity checks, anomaly detection, and geo-mismatch analysis.
           </p>
 
@@ -114,7 +114,7 @@ export default function Index() {
       {/* Footer */}
       <footer className="relative z-10 px-6 py-8 border-t border-border/30 text-center">
         <p className="text-sm text-muted-foreground font-body">
-          ┬⌐ 2026 FraudShield ΓÇö Real-Time Transaction Analysis Platform
+          &copy; 2026 NEURAL SHIELD — Real-Time Transaction Analysis Platform
         </p>
       </footer>
     </div>

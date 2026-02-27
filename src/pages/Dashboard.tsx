@@ -123,11 +123,35 @@ export default function Dashboard() {
   // Form state
   const [amount, setAmount] = useState("");
   const [txType, setTxType] = useState<TransactionType>("bank_transfer");
-  const [algoModel, setAlgoModel] = useState<string>("xgboost");
 
-  // Dummy fields strictly for UI DB
+  // New granular UI fields
   const [senderName, setSenderName] = useState("");
+  const [senderAccount, setSenderAccount] = useState("");
   const [receiverName, setReceiverName] = useState("");
+  const [receiverAccount, setReceiverAccount] = useState("");
+  const [txDate, setTxDate] = useState("");
+  const [txTimeHhMm, setTxTimeHhMm] = useState("");
+  const [txTimeAmPm, setTxTimeAmPm] = useState("AM");
+  const [description, setDescription] = useState("");
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this transaction?")) return;
+
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+      const res = await fetch(`${API_URL}/api/transactions/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      if (!res.ok) throw new Error("Delete failed");
+      toast.success("Transaction deleted");
+      fetchTransactions();
+      if (detailTx === id) setDetailTx(null);
+    } catch (err) {
+      toast.error("Failed to delete transaction");
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
@@ -229,15 +253,31 @@ export default function Dashboard() {
         transactionData["agg_mean"] = parsedAmount;
       }
 
-      // Execute Real ML Analysis
-      const mlResponse = await predictFraud(transactionData, txType, algoModel);
+      // ** AUTO-SELECT OPTIMAL ML ALGORITHM BASED ON PAYMENT PROTOCOL **
+      let optimalAlgo = "xgboost";
+      if (txType === "credit_card") optimalAlgo = "random_forest";
+      else if (txType === "upi") optimalAlgo = "logistic_regression";
+      else if (txType === "bitcoin") optimalAlgo = "autoencoder";
+
+      // Reconstruct standard datetime string from form segments
+      const dt = txDate && txTimeHhMm ? new Date(`${txDate} ${txTimeHhMm} ${txTimeAmPm}`) : new Date();
+      if (isNaN(dt.getTime())) {
+        toast.error("Invalid Date/Time configuration");
+        setSubmitting(false);
+        return;
+      }
+
+      const formattedIsoDate = dt.toISOString();
+
+      // Execute Real ML Analysis using auto-selected Engine
+      const mlResponse = await predictFraud(transactionData, txType, optimalAlgo);
 
       let riskScore = 0;
       let riskLevel = "low";
       if (mlResponse.success && mlResponse.result) {
         riskScore = Number(mlResponse.result.fraud_probability);
         riskLevel = mlResponse.result.risk_level;
-        toast.info(`Engine: ${algoModel} returned ${mlResponse.result.prediction}`);
+        toast.info(`Engine: ${optimalAlgo} returned ${mlResponse.result.prediction}`);
       } else {
         toast.error("Model offline, using fallback heuristic");
         riskScore = parsedAmount > 10000 ? 80 : 10;
@@ -256,13 +296,14 @@ export default function Dashboard() {
           amount: parsedAmount,
           transaction_type: txType,
           sender_name: senderName || "System Test",
-          sender_account: "TEST-0000",
+          sender_account: senderAccount || "TEST-0000",
           receiver_name: receiverName || "External Recipient",
-          receiver_account: "RCV-1111",
-          description: `Analysis via ${algoModel}`,
+          receiver_account: receiverAccount || "RCV-1111",
+          transaction_date: formattedIsoDate,
+          description: description || `Analysis via ${optimalAlgo}`,
           risk_score: riskScore,
           risk_level: riskLevel,
-          flags: JSON.stringify(["Model Inference Executed", `Engine: ${algoModel}`, `Protocol: ${txType}`]),
+          flags: JSON.stringify(["Model Inference Executed", `Engine: ${optimalAlgo}`, `Protocol: ${txType}`]),
           amount_anomaly: riskScore > 50,
           velocity_check: false,
           duplicate_detected: false,
@@ -277,6 +318,13 @@ export default function Dashboard() {
         toast.success(riskLevel === "high" ? "🚨 HIGH RISK transaction" : "✅ Safe Transaction");
         setDialogOpen(false);
         setAmount("");
+        setSenderName("");
+        setSenderAccount("");
+        setReceiverName("");
+        setReceiverAccount("");
+        setTxDate("");
+        setDescription("");
+        setTxTimeHhMm("");
         fetchTransactions();
       }
 
@@ -370,14 +418,12 @@ export default function Dashboard() {
                   Signal Analysis
                 </DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-
-                <div className="space-y-4 p-4 rounded-xl glass cyber-border">
+              <div className="space-y-4 p-4 rounded-xl glass cyber-border">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-muted-foreground text-xs uppercase tracking-wider font-bold">Transfer Amount</Label>
                     <Input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" step="0.01" min="0.01" required className="bg-muted/50 text-lg font-mono focus-visible:ring-primary" placeholder="0.00" />
                   </div>
-
                   <div className="space-y-2">
                     <Label className="text-muted-foreground text-xs uppercase tracking-wider font-bold">Protocol Type</Label>
                     <Select value={txType} onValueChange={(val: any) => setTxType(val)}>
@@ -392,153 +438,191 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="space-y-3 p-4 rounded-xl glass cyber-border relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[50px] rounded-full mix-blend-screen pointer-events-none" />
-
-                  <div className="flex items-center gap-2 mb-2 text-primary">
-                    <Zap className="w-4 h-4" />
-                    <span className="font-heading text-sm font-bold tracking-wide">AI Algorithm Engine</span>
+                {/* Datetime configuration */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-2 col-span-1">
+                    <Label className="text-muted-foreground text-xs">Date</Label>
+                    <Input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} required className="bg-muted/50 font-mono text-xs" />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 relative z-10">
-                    {ALGORITHMS.map(a => (
-                      <button
-                        key={a.id} type="button" onClick={() => setAlgoModel(a.id)}
-                        className={`p-3 text-left border rounded-xl transition-all ${algoModel === a.id ? "bg-primary/20 border-primary glow-primary" : "bg-muted/30 border-border hover:border-muted-foreground/50"}`}
-                      >
-                        <div className={`font-semibold text-sm font-heading ${algoModel === a.id ? "text-primary" : "text-foreground"}`}>{a.label}</div>
-                        <div className="text-[10px] text-muted-foreground mt-1 leading-tight">{a.desc}</div>
-                      </button>
-                    ))}
+                  <div className="space-y-2 col-span-1">
+                    <Label className="text-muted-foreground text-xs">Time</Label>
+                    <Input type="time" value={txTimeHhMm} onChange={(e) => setTxTimeHhMm(e.target.value)} required className="bg-muted/50 font-mono text-xs" />
+                  </div>
+                  <div className="space-y-2 col-span-1">
+                    <Label className="text-muted-foreground text-xs">Period</Label>
+                    <Select value={txTimeAmPm} onValueChange={setTxTimeAmPm}>
+                      <SelectTrigger className="bg-muted/50 font-mono text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="AM">AM</SelectItem>
+                        <SelectItem value="PM">PM</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3 p-4 rounded-xl glass cyber-border">
+                  <h4 className="text-xs uppercase tracking-wider font-bold text-primary flex items-center gap-1"><Zap className="w-3 h-3" /> Origin Node</h4>
                   <div className="space-y-2">
                     <Label className="text-muted-foreground text-xs">Origin Name</Label>
-                    <Input value={senderName} onChange={(e) => setSenderName(e.target.value)} className="bg-muted/50" placeholder="Optional" />
+                    <Input value={senderName} onChange={(e) => setSenderName(e.target.value)} required className="bg-muted/50 text-xs" placeholder="John Doe" />
                   </div>
                   <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">Outbound Acc No.</Label>
+                    <Input value={senderAccount} onChange={(e) => setSenderAccount(e.target.value)} required className="bg-muted/50 font-mono text-xs" placeholder="XXXX-XXXX" />
+                  </div>
+                </div>
+
+                <div className="space-y-3 p-4 rounded-xl glass cyber-border">
+                  <h4 className="text-xs uppercase tracking-wider font-bold text-primary flex items-center gap-1"><Shield className="w-3 h-3" /> Target Node</h4>
+                  <div className="space-y-2">
                     <Label className="text-muted-foreground text-xs">Target Name</Label>
-                    <Input value={receiverName} onChange={(e) => setReceiverName(e.target.value)} className="bg-muted/50" placeholder="Optional" />
+                    <Input value={receiverName} onChange={(e) => setReceiverName(e.target.value)} required className="bg-muted/50 text-xs" placeholder="Jane Smith" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">Inbound Acc No.</Label>
+                    <Input value={receiverAccount} onChange={(e) => setReceiverAccount(e.target.value)} required className="bg-muted/50 font-mono text-xs" placeholder="XXXX-XXXX" />
                   </div>
                 </div>
-
-                <Button type="submit" disabled={submitting} className="w-full gradient-primary text-primary-foreground font-heading glow-primary py-6 text-lg tracking-wide hover:scale-[1.02] transition-transform">
-                  {submitting ? "Processing Sequence..." : "Execute Detection Model"}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {/* Analytics Dashboard */}
-        <AnalyticsCharts transactions={transactions as any} analyses={analyses as any} />
-
-        {/* Transaction List */}
-        {transactions.length === 0 ? (
-          <div className="glass rounded-2xl p-12 text-center cyber-border">
-            <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-heading text-xl text-muted-foreground mb-2">No transaction data</h3>
-            <p className="text-sm text-muted-foreground">Add your first transaction to run the AI heuristic model.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {transactions.map((tx, i) => {
-              const analysis = analyses[tx.id];
-              return (
-                <motion.div
-                  key={tx.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="glass rounded-xl p-4 cyber-border hover:border-primary/40 transition-all cursor-pointer group"
-                  onClick={() => setDetailTx(tx.id)}
-                >
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:glow-primary transition-all">
-                        <Activity className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="font-heading text-sm font-semibold text-foreground">{tx.transaction_id}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(tx.created_at).toLocaleString()} ┬╖ <span className="uppercase text-primary">{tx.transaction_type}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="font-display text-lg font-bold text-foreground">
-                        ${Number(tx.amount).toLocaleString()}
-                      </span>
-                      {analysis && <RiskBadge level={analysis.risk_level} />}
-                      <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
-                        <Eye className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </div>
-                  </div>
-                  {analysis && (
-                    <div className="mt-4 border-t border-border/50 pt-3">
-                      <RiskMeter score={Number(analysis.risk_score)} />
-                    </div>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Detail Dialog */}
-        <Dialog open={!!detailTx} onOpenChange={(open) => { if (!open) setDetailTx(null); }}>
-          <DialogContent className="glass-strong border-border max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="font-heading text-xl text-foreground flex items-center gap-2">
-                <Server className="w-5 h-5 text-primary" /> Event Telemetry
-              </DialogTitle>
-            </DialogHeader>
-            {detailTransaction && (
-              <div className="space-y-4 mt-4">
-                <div className="p-4 rounded-xl bg-card border border-border shadow-inner">
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Payload Amount</div>
-                  <div className="font-display text-4xl font-bold text-foreground">${Number(detailTransaction.amount).toLocaleString()}</div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-sm p-4 rounded-xl glass cyber-border">
-                  <div><span className="text-muted-foreground">Event Hash:</span> <div className="text-foreground font-mono text-xs mt-1">{detailTransaction.transaction_id}</div></div>
-                  <div><span className="text-muted-foreground">Protocol:</span> <div className="text-foreground uppercase font-bold text-xs mt-1 text-primary">{detailTransaction.transaction_type}</div></div>
-                  <div className="col-span-2"><span className="text-muted-foreground">Timestamp:</span> <div className="text-foreground font-mono text-xs mt-1">{new Date(detailTransaction.created_at).toLocaleString()}</div></div>
-                </div>
-
-                {detailAnalysis && (
-                  <>
-                    <div className="p-4 rounded-xl glass cyber-border space-y-4 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-destructive/10 blur-[50px] rounded-full mix-blend-screen pointer-events-none" />
-
-                      <div className="flex items-center justify-between">
-                        <span className="font-heading font-bold tracking-wide">Algorithmic Confidence</span>
-                        <RiskBadge level={detailAnalysis.risk_level} />
-                      </div>
-                      <RiskMeter score={Number(detailAnalysis.risk_score)} />
-
-                      {(detailAnalysis.flags as string[]).length > 0 && (
-                        <div className="space-y-2 mt-4 pt-4 border-t border-border/50">
-                          <span className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Model Output Parameters:</span>
-                          {(detailAnalysis.flags as string[]).map((flag, i) => (
-                            <div key={i} className="flex items-start gap-2 text-sm text-warning bg-warning/5 rounded-lg p-2 border border-warning/20 font-mono text-xs">
-                              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                              <span>{flag}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
               </div>
-            )}
+
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs">Internal Description / Memo</Label>
+                <Input value={description} onChange={(e) => setDescription(e.target.value)} className="bg-muted/50" placeholder="Optional context..." />
+              </div>
+
+              <Button type="submit" disabled={submitting} className="w-full gradient-primary text-primary-foreground font-heading glow-primary py-6 text-lg tracking-wide hover:scale-[1.02] transition-transform">
+                {submitting ? "Processing Sequence..." : "Execute Detection Model"}
+              </Button>
+            </form>
           </DialogContent>
         </Dialog>
-      </main>
     </div>
+
+        {/* Analytics Dashboard */ }
+  <AnalyticsCharts transactions={transactions as any} analyses={analyses as any} />
+
+  {/* Transaction List */ }
+
+  {
+    transactions.length === 0 ? (
+      <div className="glass rounded-2xl p-12 text-center cyber-border">
+        <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="font-heading text-xl text-muted-foreground mb-2">No transaction data</h3>
+        <p className="text-sm text-muted-foreground">Add your first transaction to run the AI heuristic model.</p>
+      </div>
+    ) : (
+      <div className="space-y-3">
+        {transactions.map((tx, i) => {
+          const analysis = analyses[tx.id];
+          return (
+            <motion.div
+              key={tx.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="glass rounded-xl p-4 cyber-border hover:border-primary/40 transition-all cursor-pointer group"
+              onClick={() => setDetailTx(tx.id)}
+            >
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:glow-primary transition-all">
+                    <Activity className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="font-heading text-sm font-semibold text-foreground">{tx.transaction_id}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(tx.created_at).toLocaleString()} ┬╖ <span className="uppercase text-primary">{tx.transaction_type}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="font-display text-lg font-bold text-foreground mr-2">
+                    ${Number(tx.amount).toLocaleString()}
+                  </span>
+                  {analysis && <RiskBadge level={analysis.risk_level} />}
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full bg-muted/50 hover:bg-primary/20 hover:text-primary transition-colors text-muted-foreground" onClick={(e) => { e.stopPropagation(); setDetailTx(tx.id); }}>
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full bg-muted/50 hover:bg-destructive/20 hover:text-destructive transition-colors text-muted-foreground" onClick={(e) => handleDelete(e, tx.id)}>
+                      <XCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              {analysis && (
+                <div className="mt-4 border-t border-border/50 pt-3">
+                  <RiskMeter score={Number(analysis.risk_score)} />
+                </div>
+              )}
+            </motion.div>
+          );
+        })}
+      </div>
+    )
+  }
+
+  {/* Detail Dialog */ }
+  <Dialog open={!!detailTx} onOpenChange={(open) => { if (!open) setDetailTx(null); }}>
+    <DialogContent className="glass-strong border-border max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="font-heading text-xl text-foreground flex items-center gap-2">
+          <Server className="w-5 h-5 text-primary" /> Event Telemetry
+        </DialogTitle>
+      </DialogHeader>
+      {detailTransaction && (
+        <div className="space-y-4 mt-4">
+          <div className="p-4 rounded-xl bg-card border border-border shadow-inner">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Payload Amount</div>
+            <div className="font-display text-4xl font-bold text-foreground">${Number(detailTransaction.amount).toLocaleString()}</div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-sm p-4 rounded-xl glass cyber-border">
+            <div className="col-span-2"><span className="text-muted-foreground">Event Hash:</span> <div className="text-foreground font-mono text-xs mt-1">{detailTransaction.transaction_id}</div></div>
+
+            <div><span className="text-muted-foreground">Protocol:</span> <div className="text-foreground uppercase font-bold text-xs mt-1 text-primary">{detailTransaction.transaction_type}</div></div>
+            <div><span className="text-muted-foreground">Log Date:</span> <div className="text-foreground font-mono text-xs mt-1">{new Date(detailTransaction.transaction_date || detailTransaction.created_at).toLocaleString()}</div></div>
+
+            <div className="pt-2 mt-2 border-t border-border/50"><span className="text-muted-foreground">Origin Node:</span> <div className="text-foreground font-bold text-xs mt-1">{detailTransaction.sender_name} <span className="opacity-50 text-[10px] block font-mono">{detailTransaction.sender_account}</span></div></div>
+            <div className="pt-2 mt-2 border-t border-border/50"><span className="text-muted-foreground">Target Node:</span> <div className="text-foreground font-bold text-xs mt-1">{detailTransaction.receiver_name} <span className="opacity-50 text-[10px] block font-mono">{detailTransaction.receiver_account}</span></div></div>
+
+            {detailTransaction.description && (
+              <div className="col-span-2 pt-2 mt-2 border-t border-border/50"><span className="text-muted-foreground">Context:</span> <div className="text-foreground font-mono text-xs mt-1">{detailTransaction.description}</div></div>
+            )}
+          </div>
+
+          {detailAnalysis && (
+            <>
+              <div className="p-4 rounded-xl glass cyber-border space-y-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-destructive/10 blur-[50px] rounded-full mix-blend-screen pointer-events-none" />
+
+                <div className="flex items-center justify-between">
+                  <span className="font-heading font-bold tracking-wide">Algorithmic Confidence</span>
+                  <RiskBadge level={detailAnalysis.risk_level} />
+                </div>
+                <RiskMeter score={Number(detailAnalysis.risk_score)} />
+
+                {(detailAnalysis.flags as string[]).length > 0 && (
+                  <div className="space-y-2 mt-4 pt-4 border-t border-border/50">
+                    <span className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Model Output Parameters:</span>
+                    {(detailAnalysis.flags as string[]).map((flag, i) => (
+                      <div key={i} className="flex items-start gap-2 text-sm text-warning bg-warning/5 rounded-lg p-2 border border-warning/20 font-mono text-xs">
+                        <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <span>{flag}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </DialogContent>
+  </Dialog>
+</main >
+</div >
   );
 }
