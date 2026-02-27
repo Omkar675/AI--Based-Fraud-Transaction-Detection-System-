@@ -169,12 +169,14 @@ async def predict(data: TransactionData):
             print(f"Proba Error: {prob_err}")
             prob_fraud = 95.0 if prediction == "FRAUD" else 5.0
 
-        # Heuristic "Safety Valve" for extreme outliers
-        # If amount is > 500k and it's a bank/upi transfer, boost risk
+        # Heuristic "Safety Valve" for better sensitivity
+        # Boost risk for significant amounts that models might miss
         amount_val = float(raw_data.get('amount', raw_data.get('Amount', raw_data.get('amount (INR)', 0))))
-        if amount_val > 500000 and prediction == "LEGITIMATE":
-            print(f"Outlier detected: ${amount_val}. Boosting risk score.")
-            prob_fraud = 65.0 # Elevate to medium risk at least
+        
+        if amount_val > 5000 and prediction == "LEGITIMATE":
+            print(f"Sensitivity Boost: ${amount_val} is high value. Elevating risk.")
+            # If it's over 10k, make it definitely High/Medium
+            prob_fraud = 75.0 if amount_val > 10000 else 55.0
             
         risk_level = "HIGH" if prob_fraud > 70 else "MEDIUM" if prob_fraud > 30 else "LOW"
         

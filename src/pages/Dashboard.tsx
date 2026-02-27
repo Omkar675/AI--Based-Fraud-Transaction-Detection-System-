@@ -419,7 +419,7 @@ export default function Dashboard() {
                 <DialogHeader>
                   <DialogTitle className="font-heading text-xl text-foreground flex items-center gap-2">
                     <Activity className="w-5 h-5 text-primary" />
-                    Signal Analysis
+                    Transaction Scan
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 p-4 rounded-xl glass cyber-border">
@@ -429,7 +429,7 @@ export default function Dashboard() {
                       <Input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" step="0.01" min="0.01" required className="bg-muted/50 text-lg font-mono focus-visible:ring-primary" placeholder="0.00" />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs uppercase tracking-wider font-bold">Protocol Type</Label>
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider font-bold">Payment Method</Label>
                       <Select value={txType} onValueChange={(val: any) => setTxType(val)}>
                         <SelectTrigger className="bg-muted/50 font-mono"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -467,7 +467,7 @@ export default function Dashboard() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-3 p-4 rounded-xl glass cyber-border">
-                    <h4 className="text-xs uppercase tracking-wider font-bold text-primary flex items-center gap-1"><Zap className="w-3 h-3" /> Origin Node</h4>
+                    <h4 className="text-xs uppercase tracking-wider font-bold text-primary flex items-center gap-1"><Zap className="w-3 h-3" /> Sender Information</h4>
                     <div className="space-y-2">
                       <Label className="text-muted-foreground text-xs">Origin Name</Label>
                       <Input value={senderName} onChange={(e) => setSenderName(e.target.value)} required className="bg-muted/50 text-xs" placeholder="John Doe" />
@@ -479,7 +479,7 @@ export default function Dashboard() {
                   </div>
 
                   <div className="space-y-3 p-4 rounded-xl glass cyber-border">
-                    <h4 className="text-xs uppercase tracking-wider font-bold text-primary flex items-center gap-1"><Shield className="w-3 h-3" /> Target Node</h4>
+                    <h4 className="text-xs uppercase tracking-wider font-bold text-primary flex items-center gap-1"><Shield className="w-3 h-3" /> Recipient Information</h4>
                     <div className="space-y-2">
                       <Label className="text-muted-foreground text-xs">Target Name</Label>
                       <Input value={receiverName} onChange={(e) => setReceiverName(e.target.value)} required className="bg-muted/50 text-xs" placeholder="Jane Smith" />
@@ -492,12 +492,12 @@ export default function Dashboard() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">Internal Description / Memo</Label>
-                  <Input value={description} onChange={(e) => setDescription(e.target.value)} className="bg-muted/50" placeholder="Optional context..." />
+                  <Label className="text-muted-foreground text-xs">Transaction Note (Optional)</Label>
+                  <Input value={description} onChange={(e) => setDescription(e.target.value)} className="bg-muted/50" placeholder="e.g. Rent, Grocery..." />
                 </div>
 
                 <Button type="submit" disabled={submitting} className="w-full gradient-primary text-primary-foreground font-heading glow-primary py-6 text-lg tracking-wide hover:scale-[1.02] transition-transform">
-                  {submitting ? "Processing Sequence..." : "Execute Detection Model"}
+                  {submitting ? "Analyzing Security..." : "Protect & Transfer"}
                 </Button>
               </form>
             </DialogContent>
@@ -535,9 +535,9 @@ export default function Dashboard() {
                           <Activity className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                          <div className="font-heading text-sm font-semibold text-foreground">{tx.transaction_id}</div>
+                          <div className="font-heading text-sm font-semibold text-foreground">To: {tx.receiver_name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {new Date(tx.created_at).toLocaleString()} ┬╖ <span className="uppercase text-primary">{tx.transaction_type}</span>
+                            {new Date(tx.created_at).toLocaleString()} ┬╖ <span className="uppercase text-primary">{tx.transaction_type.replace('_', ' ')}</span>
                           </div>
                         </div>
                       </div>
@@ -573,7 +573,7 @@ export default function Dashboard() {
           <DialogContent className="glass-strong border-border max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-heading text-xl text-foreground flex items-center gap-2">
-                <Server className="w-5 h-5 text-primary" /> Event Telemetry
+                <Server className="w-5 h-5 text-primary" /> Analysis Report
               </DialogTitle>
             </DialogHeader>
             {detailTransaction && (
@@ -586,11 +586,11 @@ export default function Dashboard() {
                 <div className="grid grid-cols-2 gap-3 text-sm p-4 rounded-xl glass cyber-border">
                   <div className="col-span-2"><span className="text-muted-foreground">Event Hash:</span> <div className="text-foreground font-mono text-xs mt-1">{detailTransaction.transaction_id}</div></div>
 
-                  <div><span className="text-muted-foreground">Protocol:</span> <div className="text-foreground uppercase font-bold text-xs mt-1 text-primary">{detailTransaction.transaction_type}</div></div>
-                  <div><span className="text-muted-foreground">Log Date:</span> <div className="text-foreground font-mono text-xs mt-1">{new Date(detailTransaction.transaction_date || detailTransaction.created_at).toLocaleString()}</div></div>
+                  <div><span className="text-muted-foreground">Method:</span> <div className="text-foreground uppercase font-bold text-xs mt-1 text-primary">{detailTransaction.transaction_type.replace('_', ' ')}</div></div>
+                  <div><span className="text-muted-foreground">Date:</span> <div className="text-foreground font-mono text-xs mt-1">{new Date(detailTransaction.transaction_date || detailTransaction.created_at).toLocaleString()}</div></div>
 
-                  <div className="pt-2 mt-2 border-t border-border/50"><span className="text-muted-foreground">Origin Node:</span> <div className="text-foreground font-bold text-xs mt-1">{detailTransaction.sender_name} <span className="opacity-50 text-[10px] block font-mono">{detailTransaction.sender_account}</span></div></div>
-                  <div className="pt-2 mt-2 border-t border-border/50"><span className="text-muted-foreground">Target Node:</span> <div className="text-foreground font-bold text-xs mt-1">{detailTransaction.receiver_name} <span className="opacity-50 text-[10px] block font-mono">{detailTransaction.receiver_account}</span></div></div>
+                  <div className="pt-2 mt-2 border-t border-border/50"><span className="text-muted-foreground">Sender:</span> <div className="text-foreground font-bold text-xs mt-1">{detailTransaction.sender_name} <span className="opacity-50 text-[10px] block font-mono">Acc: {detailTransaction.sender_account}</span></div></div>
+                  <div className="pt-2 mt-2 border-t border-border/50"><span className="text-muted-foreground">Recipient:</span> <div className="text-foreground font-bold text-xs mt-1">{detailTransaction.receiver_name} <span className="opacity-50 text-[10px] block font-mono">Acc: {detailTransaction.receiver_account}</span></div></div>
 
                   {detailTransaction.description && (
                     <div className="col-span-2 pt-2 mt-2 border-t border-border/50"><span className="text-muted-foreground">Context:</span> <div className="text-foreground font-mono text-xs mt-1">{detailTransaction.description}</div></div>
@@ -603,7 +603,7 @@ export default function Dashboard() {
                       <div className="absolute top-0 right-0 w-32 h-32 bg-destructive/10 blur-[50px] rounded-full mix-blend-screen pointer-events-none" />
 
                       <div className="flex items-center justify-between">
-                        <span className="font-heading font-bold tracking-wide">Algorithmic Confidence</span>
+                        <span className="font-heading font-bold tracking-wide">AI Risk Assessment</span>
                         <RiskBadge level={detailAnalysis.risk_level} />
                       </div>
                       <RiskMeter score={Number(detailAnalysis.risk_score)} />
