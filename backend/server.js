@@ -24,18 +24,11 @@ const pool = new Pool({
 
 // Email transporter setup
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: false, // true for 465, false for other ports
+    service: 'gmail', // Let nodemailer handle all the custom Google SMTP connection quirks natively
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
-    },
-    tls: {
-        rejectUnauthorized: false
-    },
-    // Force IPv4 to prevent Render throwing ENETUNREACH internally
-    family: 4
+    }
 });
 
 // Helper for sending verification email
