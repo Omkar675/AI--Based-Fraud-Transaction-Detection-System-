@@ -14,7 +14,7 @@ export interface PredictionResponse {
     error?: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_ML_API_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 
 export async function predictFraud(
     transactionData: Record<string, any>,
@@ -22,10 +22,11 @@ export async function predictFraud(
     modelAlgorithm: string = "xgboost"
 ): Promise<PredictionResponse> {
     try {
-        const response = await fetch(`${API_BASE_URL}/predict`, {
+        const response = await fetch(`${API_BASE_URL}/api/predict`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
             },
             body: JSON.stringify({
                 transaction_data: transactionData,

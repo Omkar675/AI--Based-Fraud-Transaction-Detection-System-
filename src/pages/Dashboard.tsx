@@ -283,8 +283,16 @@ export default function Dashboard() {
         toast.info(`Engine: ${optimalAlgo} returned ${mlResponse.result.prediction}`);
       } else {
         toast.error("Model offline, using fallback heuristic");
-        riskScore = parsedAmount > 10000 ? 80 : 10;
-        riskLevel = riskScore > 60 ? "high" : "low";
+        if (parsedAmount >= 10000) {
+          riskScore = 85;
+          riskLevel = "high";
+        } else if (parsedAmount > 5000) {
+          riskScore = 55;
+          riskLevel = "medium";
+        } else {
+          riskScore = 15;
+          riskLevel = "low";
+        }
       }
 
       // Push to backend history DB

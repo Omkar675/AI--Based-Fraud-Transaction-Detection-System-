@@ -213,7 +213,32 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// 4. Get Current User Profile
+// 4. Proxy for ML Prediction (Frontend calls Node, Node calls Python)
+app.post('/api/predict', authenticateToken, async (req, res) => {
+    try {
+        const ML_API_URL = process.env.ML_API_URL || "http://localhost:8000";
+        console.log(`Forwarding prediction request to: ${ML_API_URL}/predict`);
+
+        const response = await fetch(`${ML_API_URL}/predict`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(req.body)
+        });
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            return res.status(response.status).json({ error: errData.detail || "ML Backend error" });
+        }
+
+        const data = await response.json();
+        res.json(data);
+    } catch (err) {
+        console.error("ML Proxy Error:", err);
+        res.status(503).json({ error: "ML Service temporarily unreachable" });
+    }
+});
+
+// 5. Get Current User Profile
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(`
