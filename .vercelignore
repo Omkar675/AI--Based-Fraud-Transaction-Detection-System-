@@ -1,0 +1,14 @@
+# Ignore Python files in Vercel
+main.py
+pipeline.py
+requirements.txt
+ml_backend/
+backend/
+Dockerfile
+docker-compose.yml
+.dockerignore
+__pycache__/
+*.pkl
+TSC.log
+build.err
+build.log
