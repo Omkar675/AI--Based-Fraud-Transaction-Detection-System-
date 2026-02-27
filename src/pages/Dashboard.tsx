@@ -213,10 +213,9 @@ export default function Dashboard() {
 
     try {
       // ** AUTO-SELECT OPTIMAL ML ALGORITHM BASED ON PAYMENT PROTOCOL **
-      let optimalAlgo = "xgboost";
-      if (txType === "credit_card") optimalAlgo = "random_forest";
-      else if (txType === "upi") optimalAlgo = "logistic_regression";
-      else if (txType === "bitcoin") optimalAlgo = "autoencoder";
+      let optimalAlgo = "xgboost"; // Best for Bank Transfer & Credit Card
+      if (txType === "upi") optimalAlgo = "logistic_regression";
+      else if (txType === "bitcoin") optimalAlgo = "xgboost";
 
       // Reconstruct standard datetime string from form segments
       const dt = txDate && txTimeHhMm ? new Date(`${txDate} ${txTimeHhMm} ${txTimeAmPm}`) : new Date();
