@@ -215,6 +215,9 @@ app.post('/api/auth/login', async (req, res) => {
 
 // 4. Proxy for ML Prediction (Frontend calls Node, Node calls Python)
 app.post('/api/predict', authenticateToken, async (req, res) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
     try {
         const ML_API_URL = process.env.ML_API_URL || "http://localhost:8000";
         console.log(`[ML PROXY] Forwarding to: ${ML_API_URL}/predict`);
@@ -222,23 +225,32 @@ app.post('/api/predict', authenticateToken, async (req, res) => {
         const response = await fetch(`${ML_API_URL}/predict`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(req.body)
+            body: JSON.stringify(req.body),
+            signal: controller.signal
         }).catch(err => {
+            if (err.name === 'AbortError') {
+                throw new Error("ML Engine request timed out (8s)");
+            }
             console.error(`[ML PROXY] Network Error: ${err.message}`);
             throw new Error(`Connection to ML Engine failed: ${err.message}`);
         });
 
+        clearTimeout(timeout);
+
         if (!response.ok) {
             const errText = await response.text();
             console.error(`[ML PROXY] Backend Error (${response.status}): ${errText}`);
-            return res.status(response.status).json({ error: `ML Engine error (${response.status})` });
+            const status = response.status === 502 ? "502 (Bad Gateway)" : response.status === 503 ? "503 (Service Unavailable)" : response.status;
+            return res.status(response.status).json({ error: `ML Engine is currently unstable or busy (${status})` });
         }
 
         const data = await response.json();
         res.json(data);
     } catch (err) {
+        clearTimeout(timeout);
         console.error("[ML PROXY] Fatal Error:", err.message);
-        res.status(502).json({ error: err.message || "ML Service unreachable" });
+        const statusCode = err.message.includes("timed out") ? 504 : 502;
+        res.status(statusCode).json({ error: err.message || "ML Service unreachable" });
     }
 });
 

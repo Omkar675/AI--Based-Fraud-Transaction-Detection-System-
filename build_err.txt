@@ -1,0 +1,203 @@
+﻿
+> vite_react_shadcn_ts@0.0.0 build
+> vite build
+
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 5 modules transformed.
+node.exe : [31mx[39m 
+Build failed in 794ms
+At C:\Program Files\nod
+ejs\npm.ps1:29 char:3
++   & $NODE_EXE 
+$NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: ([31mx[39m B   
+ uild failed in 794    
+ms:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+[31merror during 
+build:
+[31m[vite:esbuild] 
+Transform failed with 
+6 errors:
+E:/AI--Based-Fraud-Tran
+saction-Detection-Syste
+m-/src/pages/Dashboard.
+tsx:498:14: ERROR: 
+Unexpected closing 
+"form" tag does not 
+match opening 
+"DialogContent" tag
+E:/AI--Based-Fraud-Tran
+saction-Detection-Syste
+m-/src/pages/Dashboard.
+tsx:499:12: ERROR: 
+Unexpected closing 
+"DialogContent" tag 
+does not match opening 
+"Dialog" tag
+E:/AI--Based-Fraud-Tran
+saction-Detection-Syste
+m-/src/pages/Dashboard.
+tsx:500:10: ERROR: 
+Unexpected closing 
+"Dialog" tag does not 
+match opening "div" tag
+E:/AI--Based-Fraud-Tran
+saction-Detection-Syste
+m-/src/pages/Dashboard.
+tsx:501:6: ERROR: 
+Unexpected closing 
+"div" tag does not 
+match opening "main" 
+tag
+E:/AI--Based-Fraud-Tran
+saction-Detection-Syste
+m-/src/pages/Dashboard.
+tsx:625:2: ERROR: 
+Unexpected closing 
+"main" tag does not 
+match opening "div" tag
+...[31m
+file: [36mE:/AI--Based
+-Fraud-Transaction-Dete
+ction-System-/src/pages
+/Dashboard.tsx:498:14[
+31m
+[33m
+[33mUnexpected 
+closing "form" tag 
+does not match opening 
+"DialogContent" 
+tag[33m
+496|                  
+{submitting ? 
+"Processing 
+Sequence..." : 
+"Execute Detection 
+Model"}
+497|                
+</Button>
+498|              
+</form>
+   |                ^
+499|            
+</DialogContent>
+500|          </Dialog>
+
+[33mUnexpected 
+closing 
+"DialogContent" tag 
+does not match opening 
+"Dialog" tag[33m
+497|                
+</Button>
+498|              
+</form>
+499|            
+</DialogContent>
+   |              ^
+500|          </Dialog>
+501|      </div>
+
+[33mUnexpected 
+closing "Dialog" tag 
+does not match opening 
+"div" tag[33m
+498|              
+</form>
+499|            
+</DialogContent>
+500|          </Dialog>
+   |            ^
+501|      </div>
+502|  
+
+[33mUnexpected 
+closing "div" tag does 
+not match opening 
+"main" tag[33m
+499|            
+</DialogContent>
+500|          </Dialog>
+501|      </div>
+   |        ^
+502|  
+503|          {/* 
+Analytics Dashboard */ 
+}
+
+[33mUnexpected 
+closing "main" tag 
+does not match opening 
+"div" tag[33m
+623|      
+</DialogContent>
+624|    </Dialog>
+625|  </main >
+   |    ^
+626|  </div >
+627|    );
+
+[33mUnterminated 
+regular expression[33m
+624|    </Dialog>
+625|  </main >
+626|  </div >
+   |         ^
+627|    );
+628|  }
+[31m
+    at 
+failureErrorWithLog (E:
+\AI--Based-Fraud-Transa
+ction-Detection-System-
+\node_modules\esbuild\l
+ib\main.js:1472:15)
+    at E:\AI--Based-Fra
+ud-Transaction-Detectio
+n-System-\node_modules\
+esbuild\lib\main.js:755
+:50
+    at responseCallback
+s.<computed> (E:\AI--Ba
+sed-Fraud-Transaction-D
+etection-System-\node_m
+odules\esbuild\lib\main
+.js:622:9)
+    at 
+handleIncomingPacket (E
+:\AI--Based-Fraud-Trans
+action-Detection-System
+-\node_modules\esbuild\
+lib\main.js:677:12)
+    at 
+Socket.readFromStdout (
+E:\AI--Based-Fraud-Tran
+saction-Detection-Syste
+m-\node_modules\esbuild
+\lib\main.js:600:7)
+    at Socket.emit 
+(node:events:518:28)
+    at addChunk (node:i
+nternal/streams/readabl
+e:561:12)
+    at readableAddChunk
+PushByteMode (node:inte
+rnal/streams/readable:5
+12:3)
+    at Readable.push (n
+ode:internal/streams/re
+adable:392:5)
+    at 
+Pipe.onStreamRead (node
+:internal/stream_base_c
+ommons:189:23)[39m
