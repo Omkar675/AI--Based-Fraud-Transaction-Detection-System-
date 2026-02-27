@@ -4,6 +4,7 @@
     "description": "Express backend with PostgreSQL for Fraud Detection System",
     "main": "server.js",
     "scripts": {
+        "build": "cd .. && npm install && npm run build",
         "start": "node server.js",
         "dev": "nodemon server.js"
     },
