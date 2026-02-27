@@ -415,12 +415,12 @@ export default function Dashboard() {
         {/* Add Transaction */}
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-2xl font-semibold text-foreground flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-primary" /> Transactions
+            <BarChart3 className="w-5 h-5 text-primary" /> Recent History
           </h2>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gradient-primary text-primary-foreground font-heading glow-primary">
-                <Plus className="w-4 h-4 mr-2" /> New Transaction
+                <Plus className="w-4 h-4 mr-2" /> Add New Transfer
               </Button>
             </DialogTrigger>
             <DialogContent className="glass-strong border-border max-w-lg max-h-[90vh] overflow-y-auto">
@@ -428,7 +428,7 @@ export default function Dashboard() {
                 <DialogHeader>
                   <DialogTitle className="font-heading text-xl text-foreground flex items-center gap-2">
                     <Activity className="w-5 h-5 text-primary" />
-                    Transaction Scan
+                    New Secure Scan
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 p-4 rounded-xl glass cyber-border">
@@ -582,20 +582,20 @@ export default function Dashboard() {
           <DialogContent className="glass-strong border-border max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-heading text-xl text-foreground flex items-center gap-2">
-                <Server className="w-5 h-5 text-primary" /> Analysis Report
+                <Server className="w-5 h-5 text-primary" /> Security Analysis Report
               </DialogTitle>
             </DialogHeader>
             {detailTransaction && (
               <div className="space-y-4 mt-4">
                 <div className="p-4 rounded-xl bg-card border border-border shadow-inner">
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Payload Amount</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Total Amount</div>
                   <div className="font-display text-4xl font-bold text-foreground">${Number(detailTransaction.amount).toLocaleString()}</div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-sm p-4 rounded-xl glass cyber-border">
-                  <div className="col-span-2"><span className="text-muted-foreground">Event Hash:</span> <div className="text-foreground font-mono text-xs mt-1">{detailTransaction.transaction_id}</div></div>
+                  <div className="col-span-2"><span className="text-muted-foreground">Internal ID:</span> <div className="text-foreground font-mono text-xs mt-1">{detailTransaction.transaction_id}</div></div>
 
-                  <div><span className="text-muted-foreground">Method:</span> <div className="text-foreground uppercase font-bold text-xs mt-1 text-primary">{detailTransaction.transaction_type.replace('_', ' ')}</div></div>
+                  <div><span className="text-muted-foreground">Protocol:</span> <div className="text-foreground uppercase font-bold text-xs mt-1 text-primary">{detailTransaction.transaction_type.replace('_', ' ')}</div></div>
                   <div><span className="text-muted-foreground">Date:</span> <div className="text-foreground font-mono text-xs mt-1">{new Date(detailTransaction.transaction_date || detailTransaction.created_at).toLocaleString()}</div></div>
 
                   <div className="pt-2 mt-2 border-t border-border/50"><span className="text-muted-foreground">Sender:</span> <div className="text-foreground font-bold text-xs mt-1">{detailTransaction.sender_name} <span className="opacity-50 text-[10px] block font-mono">Acc: {detailTransaction.sender_account}</span></div></div>

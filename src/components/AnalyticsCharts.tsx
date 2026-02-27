@@ -166,10 +166,10 @@ export default function AnalyticsCharts({ transactions, analyses }: AnalyticsCha
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2 font-heading text-lg font-bold text-foreground">
             <Activity className="w-5 h-5 text-primary group-hover:glow-primary transition-all" />
-            Neural Risk Over Time
+            Risk Trend Monitoring
           </div>
           <span className="font-mono text-primary bg-primary/10 px-3 py-1 rounded-md text-sm border border-primary/20">
-            Node Signals: {transactions.length}
+            Active Scans: {transactions.length}
           </span>
         </div>
         <div className="h-[280px]">
@@ -188,7 +188,7 @@ export default function AnalyticsCharts({ transactions, analyses }: AnalyticsCha
               <Area
                 type="monotone"
                 dataKey="risk_score"
-                name="Risk Score"
+                name="Risk Level"
                 stroke={CHART_COLORS.primary}
                 strokeWidth={3}
                 fill="url(#gradRisk)"
@@ -203,7 +203,7 @@ export default function AnalyticsCharts({ transactions, analyses }: AnalyticsCha
       <div className="glass rounded-xl p-5 cyber-border hover:border-primary/40 transition-all group">
         <div className="flex items-center gap-2 font-heading text-lg font-bold text-foreground mb-6">
           <AlertTriangle className="w-5 h-5 text-destructive group-hover:glow-danger transition-all" />
-          Heuristic Pattern Blocks
+          Anomaly Indicators
         </div>
         <div className="h-[220px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -212,7 +212,7 @@ export default function AnalyticsCharts({ transactions, analyses }: AnalyticsCha
               <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" tick={{ fill: "hsl(var(--foreground))", fontSize: 11 }} axisLine={false} tickLine={false} width={80} />
               <Tooltip cursor={{ fill: 'hsl(var(--primary)/0.05)' }} content={<PanelTooltip />} />
-              <Bar dataKey="value" name="Occurrences" fill={CHART_COLORS.primary} radius={[0, 4, 4, 0]} barSize={20}>
+              <Bar dataKey="value" name="Warnings" fill={CHART_COLORS.primary} radius={[0, 4, 4, 0]} barSize={20}>
                 {flagPatterns.map((_, index) => (
                   <Cell key={index} fill={[CHART_COLORS.primary, CHART_COLORS.accent, RISK_COLORS.low, RISK_COLORS.high][index % 4]} />
                 ))}
@@ -226,7 +226,7 @@ export default function AnalyticsCharts({ transactions, analyses }: AnalyticsCha
       <div className="glass rounded-xl p-5 cyber-border hover:border-primary/40 transition-all group">
         <div className="flex items-center gap-2 font-heading text-lg font-bold text-foreground mb-6">
           <PieIcon className="w-5 h-5 text-warning group-hover:glow-accent transition-all" />
-          Threat Vector Topography
+          Risk Distribution
         </div>
         <div className="h-[220px] flex items-center justify-center">
           <div className="w-1/2 h-full">
@@ -257,20 +257,20 @@ export default function AnalyticsCharts({ transactions, analyses }: AnalyticsCha
       <div className="glass rounded-xl p-5 cyber-border hover:border-primary/40 transition-all group">
         <div className="flex items-center gap-2 font-heading text-lg font-bold text-foreground mb-6">
           <ActivitySquare className="w-5 h-5 text-success glow-primary transition-all" />
-          Volume vs. Risk Matrix
+          Amount vs. Risk Map
         </div>
         <div className="h-[220px]">
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border)/0.5)" />
               <XAxis
-                type="number" dataKey="amount" name="Transfer Vol"
+                type="number" dataKey="amount" name="Transfer Amount"
                 tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontFamily: "monospace" }}
                 axisLine={false} tickLine={false}
                 tickFormatter={(v) => `$${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
               />
               <YAxis
-                type="number" dataKey="risk_score" name="Risk Output"
+                type="number" dataKey="risk_score" name="Risk Score"
                 domain={[0, 100]}
                 tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontFamily: "monospace" }}
                 axisLine={false} tickLine={false}
@@ -287,7 +287,7 @@ export default function AnalyticsCharts({ transactions, analyses }: AnalyticsCha
       <div className="glass rounded-xl p-5 cyber-border hover:border-primary/40 transition-all group">
         <div className="flex items-center gap-2 font-heading text-lg font-bold text-foreground mb-6">
           <ActivitySquare className="w-5 h-5 text-accent glow-accent transition-all" />
-          Severity Frequency
+          Alert History
         </div>
         <div className="h-[220px]">
           <ResponsiveContainer width="100%" height="100%">

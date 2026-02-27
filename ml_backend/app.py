@@ -173,12 +173,12 @@ async def predict(data: TransactionData):
         # Boost risk for significant amounts that models might miss
         amount_val = float(raw_data.get('amount', raw_data.get('Amount', raw_data.get('amount (INR)', 0))))
         
-        if amount_val > 5000 and prediction == "LEGITIMATE":
-            print(f"Sensitivity Boost: ${amount_val} is high value. Elevating risk.")
+        if amount_val > 3000 and prediction == "LEGITIMATE":
+            print(f"Sensitivity Boost: ${amount_val} is significant value. Elevating risk.")
             # If it's over 10k, make it definitely High/Medium
             prob_fraud = 75.0 if amount_val > 10000 else 55.0
             
-        risk_level = "HIGH" if prob_fraud > 70 else "MEDIUM" if prob_fraud > 30 else "LOW"
+        risk_level = "high" if prob_fraud > 70 else "medium" if prob_fraud > 30 else "low"
         
         print(f"Final Outcome: {prediction} ({prob_fraud}%) -> {risk_level}")
         
