@@ -84,9 +84,10 @@ function generateTransactionId() {
 }
 
 function RiskBadge({ level }: { level: string }) {
-  if (level === "high")
+  const l = level?.toLowerCase();
+  if (l === "high" || l === "critical")
     return <Badge className="bg-destructive/20 text-destructive border-destructive/30 font-heading"><XCircle className="w-3 h-3 mr-1" />High Risk</Badge>;
-  if (level === "medium")
+  if (l === "medium" || l === "warning")
     return <Badge className="bg-warning/20 text-warning border-warning/30 font-heading"><AlertTriangle className="w-3 h-3 mr-1" />Medium</Badge>;
   return <Badge className="bg-success/20 text-success border-success/30 font-heading"><CheckCircle className="w-3 h-3 mr-1" />Low Risk</Badge>;
 }

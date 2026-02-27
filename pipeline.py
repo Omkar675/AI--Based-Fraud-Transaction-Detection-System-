@@ -138,26 +138,33 @@ class UniversalFraudDetectionPipeline:
         
         # Determine risk level
         if fraud_prob >= 0.8:
-            risk_level = "CRITICAL"
+            risk_level = "high"
         elif fraud_prob >= 0.6:
-            risk_level = "HIGH"
+            risk_level = "high"
         elif fraud_prob >= 0.4:
-            risk_level = "MEDIUM"
+            risk_level = "medium"
         elif fraud_prob >= 0.2:
-            risk_level = "LOW"
+            risk_level = "low"
         else:
-            risk_level = "MINIMAL"
+            risk_level = "low"
+
+        # ** HEURISTIC SAFETY VALVE **
+        amount = float(transaction_data.get('amount', transaction_data.get('Amount', 0)))
+        if amount > 10000 and fraud_prob < 0.6:
+            print(f"Safety Valve: ${amount} detected. Escalating risk.")
+            risk_level = "high"
+            fraud_prob = max(fraud_prob, 0.75) # Ensure score bar is at least 75%
         
         # Build result
         roc = self.summaries[transaction_type].get('best_roc_auc', 0)
 
         result = {
-    'transaction_type': transaction_type,
-    'prediction': 'FRAUD' if prediction == 1 else 'LEGITIMATE',
-    'fraud_probability': float(round(fraud_prob * 100, 2)),
-    'risk_level': risk_level,
-    'model_accuracy': float(round(roc * 100, 2)) if roc else "N/A"
-}
+            'transaction_type': transaction_type,
+            'prediction': 'FRAUD' if (fraud_prob > 0.5 or risk_level == "high") else 'LEGITIMATE',
+            'fraud_probability': float(round(fraud_prob * 100, 2)),
+            'risk_level': risk_level,
+            'model_accuracy': float(round(roc * 100, 2)) if roc else "N/A"
+        }
 
         return result
     
