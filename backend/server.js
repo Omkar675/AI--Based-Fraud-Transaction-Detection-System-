@@ -4,7 +4,7 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+// removed nodemailer entirely since Render blocks the outbound ports
 
 const app = express();
 app.use(cors({
@@ -22,32 +22,46 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL
 });
 
-// Email transporter setup
-const transporter = nodemailer.createTransport({
-    service: 'gmail', // Let nodemailer handle all the custom Google SMTP connection quirks natively
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    }
-});
-
-// Helper for sending verification email
+// Helper for sending verification email by passing payload to Vercel Serverless
 const sendVerificationEmail = async (email, token) => {
-    const verifyLink = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+    const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
 
-    const mailOptions = {
-        from: `"NeuralShield Fraud Detection" <${process.env.SMTP_USER}>`,
-        to: email,
-        subject: "Verify your email address",
-        html: `
-      <h2>Welcome to NeuralShield Fraud Detection System</h2>
-      <p>Please click the link below to verify your email address:</p>
-      <a href="${verifyLink}" style="padding: 10px 15px; background-color: #0b57d0; color: white; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; margin-bottom: 20px;">Verify Email</a>
-      <p>If the button doesn't work, copy and paste this link: <br/> ${verifyLink}</p>
-    `
-    };
+    // Fallback URL if env is not set
+    const finalLink = process.env.FRONTEND_URL ? verificationLink : `http://localhost:5173/verify-email?token=${token}`;
 
-    await transporter.sendMail(mailOptions);
+    const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Welcome to NeuralShield!</h2>
+            <p>Please click the button below to verify your email address:</p>
+            <a href="${finalLink}" style="display: inline-block; padding: 10px 20px; background-color: #0ea5e9; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0;">
+                Verify Email
+            </a>
+            <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+            <p><a href="${finalLink}">${finalLink}</a></p>
+            <p>This link will expire in 24 hours.</p>
+        </div>
+    `;
+
+    console.log(`Dispatching email for ${email} to Vercel Gateway...`);
+    const response = await fetch(`${process.env.FRONTEND_URL}/api/send-email`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            to: email,
+            subject: "Verify your NeuralShield email address",
+            html: htmlContent,
+            secret: process.env.JWT_SECRET // secure the endpoint
+        })
+    });
+
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(`Vercel Email Gateway failed: ${errData.error || response.statusText}`);
+    }
+
+    return await response.json();
 };
 
 // Auth Middleware
