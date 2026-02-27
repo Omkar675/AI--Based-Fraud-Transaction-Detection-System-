@@ -288,18 +288,16 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
 
         const tx_id = txResult.rows[0].id;
 
-        // Very simple heuristic logic since complex ML happens on Python typically, 
-        // or just pass through risk metrics sent by the frontend's pre-processor
-        const {
-            risk_score = 10,
-            risk_level = 'low',
-            flags = [],
-            velocity_check = false,
-            amount_anomaly = false,
-            unusual_time = false,
-            duplicate_detected = false,
-            analysis_details = {}
-        } = req.body.analysis || {};
+        // Analysis results can be nested in 'analysis' or flat in the root (legacy/proxy sync)
+        const analysis = req.body.analysis || {};
+        const risk_score = req.body.risk_score ?? analysis.risk_score ?? 10;
+        const risk_level = req.body.risk_level ?? analysis.risk_level ?? 'low';
+        const flags = req.body.flags ?? analysis.flags ?? [];
+        const velocity_check = req.body.velocity_check ?? analysis.velocity_check ?? false;
+        const amount_anomaly = req.body.amount_anomaly ?? analysis.amount_anomaly ?? false;
+        const unusual_time = req.body.unusual_time ?? analysis.unusual_time ?? false;
+        const duplicate_detected = req.body.duplicate_detected ?? analysis.duplicate_detected ?? false;
+        const analysis_details = req.body.analysis_details ?? analysis.analysis_details ?? {};
 
         // Analyze transaction & store
         await client.query(`
