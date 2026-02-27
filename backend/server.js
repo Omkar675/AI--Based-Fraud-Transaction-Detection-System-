@@ -342,6 +342,24 @@ app.delete('/api/transactions/:id', authenticateToken, async (req, res) => {
         client.release();
     }
 });
+const path = require('path');
+
+// Serve Frontend in Production
+if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+    const rootDir = path.resolve(__dirname, '..');
+    app.use(express.static(path.join(rootDir, 'dist')));
+
+    app.get('*', (req, res) => {
+        if (!req.path.startsWith('/api')) {
+            res.sendFile(path.join(rootDir, 'dist', 'index.html'));
+        }
+    });
+} else {
+    // Basic root fallback for dev
+    app.get('/', (req, res) => {
+        res.send('Neural Shield Backend API API is running. Switch to Production or Render mode to serve the static frontend UI.');
+    });
+}
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
